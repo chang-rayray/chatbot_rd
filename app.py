@@ -1,11 +1,20 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 from datetime import datetime
 import json
+import os
 
-# OpenAI API 설정
-openai.api_key = "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"
-ASSISTANT_ID = "asst_JEYa2Ve77FdlOZQQc23AN2X5"
+# OpenAI 클라이언트 초기화
+api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = st.secrets.get("ASSISTANT_ID") or os.getenv("ASSISTANT_ID", "asst_JEYa2Ve77FdlOZQQc23AN2X5")
+
+# API 키 검증
+if not api_key:
+    st.error("⚠️ OpenAI API 키가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
+    st.stop()
+
+# OpenAI 클라이언트 생성
+client = OpenAI(api_key=api_key)
 
 # 페이지 설정
 st.set_page_config(
@@ -25,16 +34,22 @@ if "run_id" not in st.session_state:
 def create_thread():
     """새로운 대화 스레드 생성"""
     try:
-        thread = openai.beta.threads.create()
+        thread = client.beta.threads.create()
         return thread.id
     except Exception as e:
-        st.error(f"스레드 생성 중 오류가 발생했습니다: {str(e)}")
+        error_msg = str(e)
+        if "401" in error_msg or "invalid_api_key" in error_msg:
+            st.error("🔑 API 키가 유효하지 않습니다. OpenAI API 키를 확인해주세요.")
+        elif "429" in error_msg:
+            st.error("⏰ API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.")
+        else:
+            st.error(f"스레드 생성 중 오류가 발생했습니다: {error_msg}")
         return None
 
 def send_message(thread_id, message):
     """메시지를 스레드에 추가"""
     try:
-        openai.beta.threads.messages.create(
+        client.beta.threads.messages.create(
             thread_id=thread_id,
             role="user",
             content=message
@@ -47,7 +62,7 @@ def send_message(thread_id, message):
 def run_assistant(thread_id):
     """어시스턴트 실행"""
     try:
-        run = openai.beta.threads.runs.create(
+        run = client.beta.threads.runs.create(
             thread_id=thread_id,
             assistant_id=ASSISTANT_ID
         )
@@ -59,7 +74,7 @@ def run_assistant(thread_id):
 def get_run_status(thread_id, run_id):
     """실행 상태 확인"""
     try:
-        run = openai.beta.threads.runs.retrieve(
+        run = client.beta.threads.runs.retrieve(
             thread_id=thread_id,
             run_id=run_id
         )
@@ -71,7 +86,7 @@ def get_run_status(thread_id, run_id):
 def get_messages(thread_id):
     """스레드의 메시지들 가져오기"""
     try:
-        messages = openai.beta.threads.messages.list(thread_id=thread_id)
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
         return messages.data
     except Exception as e:
         st.error(f"메시지 가져오기 중 오류가 발생했습니다: {str(e)}")
