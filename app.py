@@ -6,13 +6,14 @@ import time
 # 환경 설정
 # --------------------------------------------------
 api_key = st.secrets.get("OPENAI_API_KEY")
-ASSISTANT_ID = st.secrets.get("ASSISTANT_ID")
+ASSISTANT_ID_1 = st.secrets.get("ASSISTANT_ID_1")  # 컨텐츠용
+ASSISTANT_ID_2 = st.secrets.get("ASSISTANT_ID_2")  # 키워드용
 
 if not api_key:
     st.error("⚠️ OpenAI API 키가 설정되지 않았습니다. Streamlit Cloud의 Secrets 설정을 확인해주세요.")
     st.stop()
 
-if not ASSISTANT_ID:
+if not ASSISTANT_ID_1 or not ASSISTANT_ID_2:
     st.error("⚠️ Assistant ID가 설정되지 않았습니다. Streamlit Cloud의 Secrets 설정을 확인해주세요.")
     st.stop()
 
@@ -53,11 +54,11 @@ def send_message(thread_id, message):
         handle_error(e, "메시지 전송")
         return False
 
-def run_assistant(thread_id):
+def run_assistant(thread_id, assistant_id):
     try:
         run = client.beta.threads.runs.create(
             thread_id=thread_id,
-            assistant_id=ASSISTANT_ID
+            assistant_id=assistant_id
         )
         return run.id
     except Exception as e:
@@ -122,13 +123,42 @@ def main():
         st.session_state.thread_id = None
     if "run_id" not in st.session_state:
         st.session_state.run_id = None
+    if "selected_assistant" not in st.session_state:
+        st.session_state.selected_assistant = "컨텐츠"
 
     st.title("🤖 Rodam AI Chatbot")
-    st.markdown("OpenAI 기반 로담 챗봇")
+    st.markdown(f"OpenAI 기반 로담 챗봇 - **{st.session_state.selected_assistant}** Assistant 사용 중")
 
     # 사이드바
     with st.sidebar:
         st.header("설정")
+        
+        # Assistant 선택
+        st.subheader("🤖 Assistant 선택")
+        assistant_options = {
+            "컨텐츠": ASSISTANT_ID_1,
+            "키워드": ASSISTANT_ID_2
+        }
+        
+        selected_assistant_name = st.selectbox(
+            "사용할 Assistant를 선택하세요:",
+            options=list(assistant_options.keys()),
+            index=list(assistant_options.keys()).index(st.session_state.selected_assistant),
+            help="컨텐츠용: 일반적인 대화 및 컨텐츠 생성\n키워드용: 키워드 분석 및 관련 작업"
+        )
+        
+        # Assistant 변경 시 대화 초기화
+        if selected_assistant_name != st.session_state.selected_assistant:
+            st.session_state.selected_assistant = selected_assistant_name
+            st.session_state.messages = []
+            st.session_state.thread_id = None
+            st.session_state.run_id = None
+            st.rerun()
+        
+        st.info(f"현재 선택: **{selected_assistant_name}** Assistant")
+        
+        st.markdown("---")
+        
         if st.button("새 대화 시작", type="primary"):
             st.session_state.messages = []
             st.session_state.thread_id = None
@@ -166,7 +196,13 @@ def main():
             return
 
         # 어시스턴트 실행
-        run_id = run_assistant(st.session_state.thread_id)
+        assistant_options = {
+            "컨텐츠": ASSISTANT_ID_1,
+            "키워드": ASSISTANT_ID_2
+        }
+        selected_assistant_id = assistant_options[st.session_state.selected_assistant]
+        
+        run_id = run_assistant(st.session_state.thread_id, selected_assistant_id)
         if not run_id:
             return
 
@@ -192,3 +228,5 @@ def main():
 # --------------------------------------------------
 if __name__ == "__main__":
     main()
+
+
