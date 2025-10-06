@@ -5,12 +5,17 @@ import json
 import os
 
 # OpenAI 클라이언트 초기화
-api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-ASSISTANT_ID = st.secrets.get("ASSISTANT_ID") or os.getenv("ASSISTANT_ID", "asst_JEYa2Ve77FdlOZQQc23AN2X5")
+# Streamlit Cloud에서는 st.secrets를 사용하여 환경 변수를 관리합니다
+api_key = st.secrets.get("OPENAI_API_KEY")
+ASSISTANT_ID = st.secrets.get("ASSISTANT_ID")
 
 # API 키 검증
 if not api_key:
-    st.error("⚠️ OpenAI API 키가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
+    st.error("⚠️ OpenAI API 키가 설정되지 않았습니다. Streamlit Cloud의 Secrets 설정을 확인해주세요.")
+    st.stop()
+
+if not ASSISTANT_ID:
+    st.error("⚠️ Assistant ID가 설정되지 않았습니다. Streamlit Cloud의 Secrets 설정을 확인해주세요.")
     st.stop()
 
 # OpenAI 클라이언트 생성
