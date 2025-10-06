@@ -1,6 +1,5 @@
 import streamlit as st
 from openai import OpenAI
-from datetime import datetime
 import time
 
 # --------------------------------------------------
@@ -116,6 +115,14 @@ def main():
         layout="wide"
     )
 
+    # ✅ 세션 상태 초기화
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "thread_id" not in st.session_state:
+        st.session_state.thread_id = None
+    if "run_id" not in st.session_state:
+        st.session_state.run_id = None
+
     st.title("🤖 Rodam AI Chatbot")
     st.markdown("OpenAI 기반 로담 챗봇")
 
@@ -123,15 +130,17 @@ def main():
     with st.sidebar:
         st.header("설정")
         if st.button("새 대화 시작", type="primary"):
-            st.session_state.clear()
+            st.session_state.messages = []
+            st.session_state.thread_id = None
+            st.session_state.run_id = None
             st.rerun()
 
         st.markdown("---")
         st.markdown("### 사용법")
         st.markdown("""
-        1. 메시지를 입력하고 Enter를 누르세요
-        2. AI가 응답을 생성할 때까지 기다리세요
-        3. 새 대화를 시작하려면 '새 대화 시작' 버튼을 클릭하세요
+        1. 메시지를 입력하고 Enter를 누르세요  
+        2. AI가 응답을 생성할 때까지 기다리세요  
+        3. 새 대화를 시작하려면 '새 대화 시작' 버튼을 클릭하세요  
         """)
 
     # 대화 이력 표시
@@ -147,7 +156,7 @@ def main():
             st.markdown(prompt)
 
         # 스레드 생성 (최초 대화일 경우)
-        if "thread_id" not in st.session_state:
+        if not st.session_state.thread_id:
             st.session_state.thread_id = create_thread()
             if not st.session_state.thread_id:
                 return
@@ -183,4 +192,3 @@ def main():
 # --------------------------------------------------
 if __name__ == "__main__":
     main()
-
